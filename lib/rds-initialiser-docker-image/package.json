@@ -1,0 +1,15 @@
+{
+  "name": "rds-init-script",
+  "version": "1.0.0",
+  "description": "RDS initialization implementation in Node.js",
+  "main": "index.mjs",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.52.0",
+    "@aws-sdk/client-ecs": "^3.52.0",
+    "@databases/pg": "^5.4.1"
+  }
+}

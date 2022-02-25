@@ -1,0 +1,44 @@
+{:dev false
+ :port 80
+ ;; :database-url "postgresql://rems_db/rems?user=rems"
+ :search-index-path "target/search-index-dev"
+ :theme-path "theme.edn"
+ :authentication :oidc
+ :log-authentication-details true
+ ;; Open ID Connect settings
+ ;; These allow login to http://localhost:3000/oidc-callback only
+ ;; :authentication :oidc
+ ;;:oidc-metadata-url "https://remsdev.eu.auth0.com/.well-known/openid-configuration"
+ ;;:oidc-client-id "aa"
+ ;;:oidc-client-secret "bb"
+ ;; some attributes that google oauth returns:
+ :oidc-extra-attributes [{:attribute "nickname" :name {:en "Nickname"}}
+                         {:attribute "picture"}]
+
+ :languages [:en]
+ :public-url "https://rems.dev.umccr.org/"
+ :render-css-file? true
+ ;;:extra-pages [{:id "about"
+ ;;               :translations {:fi {:title "Info"
+ ;;                                   :filename "about-fi.md"}
+ ;;                              :en {:title "About"
+ ;;                                   :filename "about-en.md"}
+ ;;                              :sv {:title "Info"
+ ;;                                   :filename "about-sv.md"}}}]
+ ;;:extra-pages-path "./test-data/extra-pages"
+ :application-deadline-days 4
+ :application-id-column :generated-and-assigned-external-id
+ :enable-assign-external-id-ui true
+ :attachment-max-size 10000000 ;; 10MB
+ :application-expiration nil
+ :enable-pdf-api true
+ :enable-permissions-api true
+ ;; example keys from https://tools.ietf.org/html/rfc7517#appendix-A
+ ;;:ga4gh-visa-private-key "test-data/example-private-key.jwk"
+ ;;:ga4gh-visa-public-key "test-data/example-public-key.jwk"
+ :catalogue-is-public false
+ :accessibility-report true
+ :enable-ega true
+ :enable-doi true
+ :enable-duo true
+ :enable-catalogue-tree true}
