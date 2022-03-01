@@ -15,10 +15,11 @@ accompanying `rems-cmd.sh`.
 ## AWS
 
 ```mermaid
-A[Client] --> B[Load Balancer]
-B --> C[Fargate REMS Container]
-B --> D[Fargate REMS Container]
-C --> E[RDS REMS Postgres]
+graph TD
+  A[Client] --> B[Load Balancer]
+  B --> C[Fargate REMS Container]
+  B --> D[Fargate REMS Container]
+  C --> E[RDS REMS Postgres]
 ```
 
 A new standalone VPC is created for this deployment (this could
