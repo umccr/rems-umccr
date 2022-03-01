@@ -1,7 +1,7 @@
 {
-  "name": "rds-init-script",
+  "name": "rems-command-invoke",
   "version": "1.0.0",
-  "description": "RDS initialization implementation in Node.js",
+  "description": "A lambda that can execute a pre configured Fargate task in REMS cluster",
   "main": "index.mjs",
   "scripts": {},
   "keywords": [],
@@ -9,7 +9,6 @@
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.52.0",
-    "@aws-sdk/client-ecs": "^3.52.0",
-    "@databases/pg": "^5.4.1"
+    "@aws-sdk/client-ecs": "^3.52.0"
   }
 }

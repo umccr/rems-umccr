@@ -1,22 +1,28 @@
 {:dev false
  :port 80
+
+ ;; the following settings are going to need to change on every realistic deployment
+ ;; so we want them configured at a CDK level
+ ;; to do this we bind environment variables in our Fargate
+ ;; I have left the values here commented out for reference
+
  ;; :database-url "postgresql://rems_db/rems?user=rems"
- :search-index-path "target/search-index-dev"
+ ;; :oidc-metadata-url "https://remsdev.eu.auth0.com/.well-known/openid-configuration"
+ ;; :oidc-client-id "aa"
+ ;; :oidc-client-secret "bb"
+ ;; :public-url "https://rems.dev.umccr.org/"
+
+
+ :search-index-path "search-index"
  :theme-path "theme.edn"
  :authentication :oidc
  :log-authentication-details true
  ;; Open ID Connect settings
- ;; These allow login to http://localhost:3000/oidc-callback only
- ;; :authentication :oidc
- ;;:oidc-metadata-url "https://remsdev.eu.auth0.com/.well-known/openid-configuration"
- ;;:oidc-client-id "aa"
- ;;:oidc-client-secret "bb"
  ;; some attributes that google oauth returns:
  :oidc-extra-attributes [{:attribute "nickname" :name {:en "Nickname"}}
                          {:attribute "picture"}]
 
  :languages [:en]
- :public-url "https://rems.dev.umccr.org/"
  :render-css-file? true
  ;;:extra-pages [{:id "about"
  ;;               :translations {:fi {:title "Info"

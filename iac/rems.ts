@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
-import { RemsStack } from "../lib/rems-stack";
+import { RemsStack } from "./rems-stack";
 
 const app = new cdk.App();
 

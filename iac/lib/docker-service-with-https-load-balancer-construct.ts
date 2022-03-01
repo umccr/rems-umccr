@@ -3,71 +3,63 @@ import { DockerImageAsset } from "aws-cdk-lib/aws-ecr-assets";
 import { HostedZone } from "aws-cdk-lib/aws-route53";
 import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
 import { SslPolicy } from "aws-cdk-lib/aws-elasticloadbalancingv2";
-import {
-  GatewayVpcEndpointAwsService,
-  InterfaceVpcEndpointAwsService,
-  SubnetType,
-  Vpc,
-} from "aws-cdk-lib/aws-ec2";
+import { SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
 import { ApplicationLoadBalancedFargateService } from "aws-cdk-lib/aws-ecs-patterns";
 import { Cluster, ContainerImage } from "aws-cdk-lib/aws-ecs";
-import { StringParameter } from "aws-cdk-lib/aws-ssm";
 
-type IsolatedDockerServiceWithLoadBalancerProps = {
+type Props = {
+  // the VPC to place the cluster in
   vpc: Vpc;
-  hostPrefix: string;
+
+  // the details of the domain name entry to construct as the ALB entrypoint
+  hostedPrefix: string;
+  hostedZoneName: string;
+  hostedZoneCertArn: string;
+
+  // the Docker image to run as the service
   imageAsset: DockerImageAsset;
+
+  // env variables to pass to the Docker image
   environment: { [p: string]: string };
+
+  // details of the fargate
   memoryLimitMiB: number;
   cpu: number;
+  containerName: string;
+  containerSecurityGroup: SecurityGroup;
   desiredCount: number;
   healthCheckPath?: string;
 };
 
-export class IsolatedDockerServiceWithLoadBalancerConstruct extends Construct {
+export class DockerServiceWithHttpsLoadBalancerConstruct extends Construct {
   public readonly cluster: Cluster;
   public readonly service: ApplicationLoadBalancedFargateService;
 
-  constructor(
-    scope: Construct,
-    id: string,
-    props: IsolatedDockerServiceWithLoadBalancerProps
-  ) {
+  constructor(scope: Construct, id: string, props: Props) {
     super(scope, id);
 
-    // we have some parameters that are shared amongst a lot of stacks - and rather than repeat in each repo,
-    // we look them on synthesis from parameter store
-    const certApse2Arn = StringParameter.valueFromLookup(
-      this,
-      "cert_apse2_arn"
-    );
-    const hostedZoneId = StringParameter.valueFromLookup(
-      this,
-      "hosted_zone_id"
-    );
-    const hostedZoneName = StringParameter.valueFromLookup(
-      this,
-      "hosted_zone_name"
-    );
-
+    // we have been passed in the values of an existing SSL cert and domain name in Route 53
+    // need to make CDK handles for them via lookups
     const certificate = Certificate.fromCertificateArn(
       this,
       "SslCert",
-      certApse2Arn
+      props.hostedZoneCertArn
     );
     const domainZone = HostedZone.fromLookup(this, "Zone", {
-      domainName: hostedZoneName,
+      domainName: props.hostedZoneName,
     });
 
+    // a cluster to run things on (will end up being a fargate cluster - so not actual ec2 instances)
     this.cluster = new Cluster(this, "Cluster", {
       vpc: props.vpc,
     });
 
+    // a load balanced fargate service hosted on an SSL host
     this.service = new ApplicationLoadBalancedFargateService(this, "Service", {
       cluster: this.cluster,
       certificate: certificate,
       sslPolicy: SslPolicy.RECOMMENDED,
-      domainName: `${props.hostPrefix}.${hostedZoneName}`,
+      domainName: `${props.hostedPrefix}.${props.hostedZoneName}`,
       domainZone: domainZone,
       redirectHTTP: true,
       memoryLimitMiB: props.memoryLimitMiB,
@@ -75,6 +67,7 @@ export class IsolatedDockerServiceWithLoadBalancerConstruct extends Construct {
       desiredCount: props.desiredCount,
       publicLoadBalancer: true,
       taskImageOptions: {
+        containerName: props.containerName,
         image: ContainerImage.fromDockerImageAsset(props.imageAsset),
         containerPort: 80,
         environment: props.environment,
