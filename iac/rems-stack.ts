@@ -34,6 +34,9 @@ import { PublicAndNatVpc } from "./lib/network/nat-vpc";
 import { HttpNamespace, Service } from "aws-cdk-lib/aws-servicediscovery";
 import { TaskDefinition, Cluster } from "aws-cdk-lib/aws-ecs";
 import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { LogGroup } from "aws-cdk-lib/aws-logs";
+import { ISecret, Secret } from "aws-cdk-lib/aws-secretsmanager";
+import { ServiceNamespace } from "aws-cdk-lib/aws-applicationautoscaling";
 
 // these are settings for the database *within* the RDS instance, and the postgres user name
 // they really shouldn't need to be changed but I will define them here as constants in case
@@ -47,7 +50,7 @@ export class RemsStack extends Stack {
     super(scope, id, props);
 
     const cloudMapNamespace = this.node.tryGetContext("cloudMapNamespace");
-    const rdsSecretName = this.node.tryGetContext("rdsSecretName");
+    const cloudMapId = this.node.tryGetContext("cloudMapId");
     const hostedPrefix = this.node.tryGetContext("hostedPrefix");
     const hostedZoneName = this.node.tryGetContext("hostedZoneName");
     const hostedZoneCert = this.node.tryGetContext("hostedZoneCert");
@@ -55,9 +58,12 @@ export class RemsStack extends Stack {
     const oidcClientId = this.node.tryGetContext("oidcClientId");
     const oidcClientSecret = this.node.tryGetContext("oidcClientSecret");
 
+    // if present - indicates we want to prefer multi instances/clusters over availability zones
+    const highlyAvailable = this.node.tryGetContext("highlyAvailable");
+
     if (
       !cloudMapNamespace ||
-      !rdsSecretName ||
+      !cloudMapId ||
       !hostedPrefix ||
       !hostedZoneName ||
       !hostedZoneCert
@@ -66,41 +72,28 @@ export class RemsStack extends Stack {
         "Context values must be passed into CDK invocation to set some important mandatory parameters"
       );
 
-    // we are going to try to make a set of services isolated in a private subnet
-    // and only able to access the outside world through the connected load balancer
-    // this sets up both the public and isolated subnets
-    // we also add in private links to enable the required AWS service calls for fargate etc
-    /*const vpc = new PublicAndIsolatedVpc(this, 'Vpc', {
-            awsPrivateLinksServices: [
-                // mandatory private links to support fargate
-                InterfaceVpcEndpointAwsService.ECR_DOCKER,
-                InterfaceVpcEndpointAwsService.ECR,
-                InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
-                // used for passwords etc
-                InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
-                InterfaceVpcEndpointAwsService.SSM
-            ],
-        });*/
     const vpc = new PublicAndNatVpc(this, "Vpc", {});
     const subnetSelection: SubnetSelection = {
       subnetType: SubnetType.PRIVATE_WITH_NAT,
     };
 
-    const dbMasterCredentials = Credentials.fromPassword(
-      FIXED_DATABASE_USER,
-      SecretValue.secretsManager(rdsSecretName)
-    );
+    // const dbMasterCredentials = Credentials.fromPassword(
+    //   FIXED_DATABASE_USER,
+    //   SecretValue.secretsManager(rdsSecretName)
+    // );
+    const dbCreds = Credentials.fromUsername(FIXED_DATABASE_USER);
 
     let db: DatabaseCluster | DatabaseInstance;
     let dbSocketAddress: string;
+    let dbSecret: ISecret;
 
-    if (false) {
+    if (highlyAvailable) {
       db = new DatabaseCluster(this, "Database", {
         removalPolicy: RemovalPolicy.DESTROY,
         engine: DatabaseClusterEngine.auroraPostgres({
           version: AuroraPostgresEngineVersion.VER_13_4,
         }),
-        credentials: dbMasterCredentials,
+        credentials: dbCreds,
         defaultDatabaseName: FIXED_DATABASE_NAME,
         instanceProps: {
           instanceType: InstanceType.of(
@@ -112,13 +105,14 @@ export class RemsStack extends Stack {
         },
       });
       dbSocketAddress = (db as DatabaseCluster).clusterEndpoint.socketAddress;
+      dbSecret = (db as DatabaseCluster).secret!;
     } else {
       db = new DatabaseInstance(this, "Database", {
         removalPolicy: RemovalPolicy.DESTROY,
         engine: DatabaseInstanceEngine.postgres({
           version: PostgresEngineVersion.VER_13,
         }),
-        credentials: dbMasterCredentials,
+        credentials: dbCreds,
         databaseName: FIXED_DATABASE_NAME,
         instanceType: InstanceType.of(
           InstanceClass.BURSTABLE4_GRAVITON,
@@ -128,29 +122,8 @@ export class RemsStack extends Stack {
         vpcSubnets: subnetSelection,
       });
       dbSocketAddress = (db as DatabaseInstance).instanceEndpoint.socketAddress;
+      dbSecret = (db as DatabaseInstance).secret!;
     }
-
-    //const masterDatabaseUrl = `postgresql://${dbSocketAddress}/postgres?user=${dbMasterCredentials.username}&password=${dbMasterCredentials.password}`;
-
-    /*const dbInitialiser = new RdsInitialiser(this, "RdsInit", {
-      databaseUrl: masterDatabaseUrl,
-      fnLogRetention: RetentionDays.ONE_DAY,
-      fnCode: DockerImageCode.fromImageAsset(
-        `${__dirname}/rds-initialiser-docker-image`,
-        {}
-      ),
-      fnTimeout: Duration.minutes(1),
-      fnSecurityGroups: [],
-      vpc,
-      subnetsSelection: subnetSelection,
-      databaseSecretName: secretName,
-    });
-    // manage resources dependency
-    dbInitialiser.customResource.node.addDependency(db);
-    // allow the initializer function to connect to the RDS instance
-    db.connections.allowDefaultPortFrom(dbInitialiser.function);
-
-     */
 
     db.connections.allowDefaultPortFromAnyIpv4();
 
@@ -158,6 +131,7 @@ export class RemsStack extends Stack {
 
     const asset = new DockerImageAsset(this, "RemsDockerImage", {
       directory: dockerImageFolder,
+
       buildArgs: {},
     });
 
@@ -176,7 +150,9 @@ export class RemsStack extends Stack {
     //  "rems",
     //  SecretValue.secretsManager(secretName)
     //);
-    const remsDatabaseUrl = `postgresql://${dbSocketAddress}/rems?user=${dbMasterCredentials.username}&password=${dbMasterCredentials.password}`;
+    const remsDatabaseUrl = `postgresql://${dbSocketAddress}/rems?user=${FIXED_DATABASE_USER}&password=${dbSecret.secretValueFromJson(
+      "password"
+    )}`;
 
     const isolated = new DockerServiceWithHttpsLoadBalancerConstruct(
       this,
@@ -189,7 +165,7 @@ export class RemsStack extends Stack {
         imageAsset: asset,
         memoryLimitMiB: 2048,
         cpu: 1024,
-        desiredCount: 1,
+        desiredCount: highlyAvailable ? 2 : 1,
         containerName: FIXED_CONTAINER_NAME,
         containerSecurityGroup: remsContainerSecurityGroup,
         healthCheckPath: "/",
@@ -211,6 +187,7 @@ export class RemsStack extends Stack {
       vpc,
       subnetSelection,
       isolated.cluster,
+      isolated.clusterLogGroup,
       isolated.service.taskDefinition,
       [remsContainerSecurityGroup]
     );
@@ -257,7 +234,8 @@ export class RemsStack extends Stack {
         // this is a bug in the CDK definitions - this field is optional but not defined that way
         // passing an empty string does work
         namespaceArn: "",
-        namespaceId: "ns-mjt63c4ppdrly4jd",
+        // this is also a bug? surely we should be able to lookup a namespace just by name
+        namespaceId: cloudMapId,
         namespaceName: cloudMapNamespace,
       }
     );
@@ -277,6 +255,9 @@ export class RemsStack extends Stack {
     new CfnOutput(this, "RemsDatabaseUrl", {
       value: remsDatabaseUrl,
     });
+    new CfnOutput(this, "RemsDatabaseSecretName", {
+      value: dbSecret.secretName!,
+    });
     new CfnOutput(this, "ClusterArn", {
       value: isolated.cluster.clusterArn,
     });
@@ -292,6 +273,7 @@ export class RemsStack extends Stack {
    * @param vpc
    * @param subnetSelection
    * @param cluster
+   * @param clusterLogGroup
    * @param taskDefinition
    * @param taskSecurityGroups
    * @private
@@ -300,14 +282,11 @@ export class RemsStack extends Stack {
     vpc: IVpc,
     subnetSelection: SubnetSelection,
     cluster: Cluster,
+    clusterLogGroup: LogGroup,
     taskDefinition: TaskDefinition,
     taskSecurityGroups: SecurityGroup[]
   ): DockerImageFunction {
-    const dockerImageFolder = path.join(
-      __dirname,
-      "rems-command-invoke-docker-image"
-    );
-
+    // TODO: tighten this to explicit outbound rules
     const commandLambdaSecurityGroup = new SecurityGroup(
       this,
       "CommandLambdaSecurityGroup",
@@ -315,6 +294,11 @@ export class RemsStack extends Stack {
         vpc: vpc,
         allowAllOutbound: true,
       }
+    );
+
+    const dockerImageFolder = path.join(
+      __dirname,
+      "rems-command-invoke-lambda-docker-image"
     );
 
     return new DockerImageFunction(this, "CommandLambda", {
@@ -326,8 +310,11 @@ export class RemsStack extends Stack {
       timeout: Duration.minutes(14),
       environment: {
         CLUSTER_ARN: cluster.clusterArn,
+        CLUSTER_LOG_GROUP_NAME: clusterLogGroup.logGroupName,
         TASK_DEFINITION_ARN: taskDefinition.taskDefinitionArn,
         CONTAINER_NAME: FIXED_CONTAINER_NAME,
+        // we are passing to the lambda the subnets and security groups that need to be used
+        // by the Fargate task it will invoke
         SUBNETS: vpc
           .selectSubnets(subnetSelection)
           .subnets.map((s) => s.subnetId)

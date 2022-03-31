@@ -37,12 +37,15 @@ export const handler = async (event) => {
   }
 
   const clusterArn = process.env["CLUSTER_ARN"];
+  const clusterLogGroupName = process.env["CLUSTER_LOG_GROUP_NAME"];
   const taskDefinitionArn = process.env["TASK_DEFINITION_ARN"];
   const containerName = process.env["CONTAINER_NAME"];
   const subnets = process.env["SUBNETS"];
   const securityGroups = process.env["SECURITY_GROUPS"];
 
+  // TODO ensure these non-null
   console.log(clusterArn);
+  console.log(clusterLogGroupName);
   console.log(taskDefinitionArn);
   console.log(containerName);
   console.log(subnets);
@@ -78,8 +81,19 @@ export const handler = async (event) => {
 
   const result = await client.send(command);
 
+  let logStreamName;
+
   if (result.tasks.length === 1) {
     const taskArn = result.tasks[0].taskArn;
+
+    // whenever we know the task arn - we try to construct the name of the corresponding log stream
+    // (this is a bit fragile and is dependent on only slightly documented AWS conventions)
+    // (see AWSlogdriver for ECS)
+    const taskArnSplit = taskArn.split("/");
+
+    if (taskArnSplit.length === 3)
+      logStreamName = `rems/rems/${taskArnSplit[2]}`;
+
     let lastStatus = result.tasks[0].lastStatus;
 
     while (lastStatus !== "STOPPED") {
@@ -97,7 +111,11 @@ export const handler = async (event) => {
       await sleep(10000);
     }
 
-    return { message: "Success" };
+    return {
+      message: "Success",
+      logGroupName: clusterLogGroupName,
+      logStreamName: logStreamName,
+    };
   }
 
   return { error: "Task not started", details: JSON.stringify(result) };

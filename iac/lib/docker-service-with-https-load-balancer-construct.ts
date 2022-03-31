@@ -5,7 +5,8 @@ import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
 import { SslPolicy } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
 import { ApplicationLoadBalancedFargateService } from "aws-cdk-lib/aws-ecs-patterns";
-import { Cluster, ContainerImage } from "aws-cdk-lib/aws-ecs";
+import { Cluster, ContainerImage, LogDrivers } from "aws-cdk-lib/aws-ecs";
+import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 
 type Props = {
   // the VPC to place the cluster in
@@ -34,6 +35,7 @@ type Props = {
 export class DockerServiceWithHttpsLoadBalancerConstruct extends Construct {
   public readonly cluster: Cluster;
   public readonly service: ApplicationLoadBalancedFargateService;
+  public readonly clusterLogGroup: LogGroup;
 
   constructor(scope: Construct, id: string, props: Props) {
     super(scope, id);
@@ -54,6 +56,10 @@ export class DockerServiceWithHttpsLoadBalancerConstruct extends Construct {
       vpc: props.vpc,
     });
 
+    this.clusterLogGroup = new LogGroup(this, "ServiceLog", {
+      retention: RetentionDays.ONE_WEEK,
+    });
+
     // a load balanced fargate service hosted on an SSL host
     this.service = new ApplicationLoadBalancedFargateService(this, "Service", {
       cluster: this.cluster,
@@ -67,6 +73,10 @@ export class DockerServiceWithHttpsLoadBalancerConstruct extends Construct {
       desiredCount: props.desiredCount,
       publicLoadBalancer: true,
       taskImageOptions: {
+        logDriver: LogDrivers.awsLogs({
+          streamPrefix: "rems",
+          logGroup: this.clusterLogGroup,
+        }),
         containerName: props.containerName,
         image: ContainerImage.fromDockerImageAsset(props.imageAsset),
         containerPort: 80,

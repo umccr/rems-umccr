@@ -1,18 +1,57 @@
 # REMS
 
-A CDK stack and Dockerfile for deploying REMS using configuration
-suitable for UMCCR.
+A CDK stack for deploying REMS into an AWS
+environment.
 
 The CDK stack sets up a standalone VPC with REMS Docker images
-running in Fargate in a private subnet. Access is then provided
-on an SSL application load balancer. The CDK stack can be deployed,
-destroyed etc using `rems-cdk.sh`.
+running in Fargate in a private subnet. Public access is then provided
+via an SSL application load balancer.
+
+The stack has a switch that alters deployment from a simple
+single container/db to `highlyAvailable`
+(2 containers running in different availability zones with a Postgres
+cluster).
+
+The CDK stack can be deployed, destroyed etc using a thin wrapper around
+the CDK binary - `rems-cdk.sh`.
 
 A lambda is also created for easy execution of REMS control 'cmds'
 such as "migrate" etc - and this lambda can be launched from the
 accompanying `rems-cmd.sh`.
 
-## AWS
+## Getting Started
+
+There are some AWS infrastructure that need to be setup prior to
+installing REMS.
+
+1. An AWS account
+1. A CloudMap namespace
+1. A domain name (and corresponding zone) installed into Route 53
+1. An SSL certificate installed matching the above domain name
+1. A SES setup allowing sending emails
+
+All the above infrastructure is slow to set up and tear down - and is
+often shared across multiple software stacks - so we do not attempt to
+construct them as part of the CDK. Instead we record their values in
+a couple of configuration spots.
+
+### CloudMap Namespace
+
+Create a CloudMap namespace (API mode) and enter the namespace name
+into the file
+
+`rems-cloudmap-namespace.txt`
+
+This namespace is the glue that binds various separate services together
+and allows them to locate each other.
+
+### A Domain Name in Route 53
+
+### An SSL Certificate
+
+### An SES
+
+## AWS Architecture
 
 ```mermaid
 graph TD
@@ -20,6 +59,7 @@ graph TD
   B --> C[Fargate REMS Container]
   B --> D[Fargate REMS Container]
   C --> E[RDS REMS Postgres]
+  D --> E[RDS REMS Postgres]
 ```
 
 A new standalone VPC is created for this deployment (this could

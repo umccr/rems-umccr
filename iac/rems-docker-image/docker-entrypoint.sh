@@ -26,8 +26,6 @@ else
   cmd_array=("run")
 fi
 
-env
-
 for cmd in "${cmd_array[@]}"
 do
     [ "${cmd}" = "run" ] && cmd_prefix="exec"
