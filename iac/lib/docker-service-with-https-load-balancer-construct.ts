@@ -11,6 +11,8 @@ import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 type Props = {
   // the VPC to place the cluster in
   vpc: Vpc;
+  // the security groups to associate the cluster/service with
+  securityGroups: SecurityGroup[];
 
   // the details of the domain name entry to construct as the ALB entrypoint
   hostedPrefix: string;
@@ -27,11 +29,13 @@ type Props = {
   memoryLimitMiB: number;
   cpu: number;
   containerName: string;
-  containerSecurityGroup: SecurityGroup;
   desiredCount: number;
   healthCheckPath?: string;
 };
 
+/**
+ * Creates a Docker based service in Fargate fronted by a SSL load balancer.
+ */
 export class DockerServiceWithHttpsLoadBalancerConstruct extends Construct {
   public readonly cluster: Cluster;
   public readonly service: ApplicationLoadBalancedFargateService;
@@ -72,6 +76,7 @@ export class DockerServiceWithHttpsLoadBalancerConstruct extends Construct {
       cpu: props.cpu,
       desiredCount: props.desiredCount,
       publicLoadBalancer: true,
+      securityGroups: props.securityGroups,
       taskImageOptions: {
         logDriver: LogDrivers.awsLogs({
           streamPrefix: "rems",

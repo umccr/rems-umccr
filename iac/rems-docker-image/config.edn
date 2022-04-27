@@ -10,8 +10,13 @@
  ;; :oidc-metadata-url "https://remsdev.eu.auth0.com/.well-known/openid-configuration"
  ;; :oidc-client-id "aa"
  ;; :oidc-client-secret "bb"
- ;; :public-url "https://rems.dev.umccr.org/"
+ ;; :public-url "https://myhost.domain.com/"
+ ;; in order for our environment variables to work for AUTH SES SMTP - we need the actual SMTP section to exist
+ ;; so we create it here in the config, but know the individual values will be changed in our CDK stack
+ :smtp {:host "WILL_BE_OVERRIDEN_BY_ENV" :pass "WILL_BE_OVERRIDEN_BY_ENV" :port 587 :user "WILL_BE_OVERRIDEN_BY_ENV"}
 
+
+ ;; all the settings below are only controlled from this config
 
  :search-index-path "search-index"
  :theme-path "theme.edn"

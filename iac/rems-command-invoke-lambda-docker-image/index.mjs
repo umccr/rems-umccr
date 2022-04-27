@@ -43,7 +43,18 @@ export const handler = async (event) => {
   const subnets = process.env["SUBNETS"];
   const securityGroups = process.env["SECURITY_GROUPS"];
 
-  // TODO ensure these non-null
+  if (
+    !clusterArn ||
+    !clusterLogGroupName ||
+    !taskDefinitionArn ||
+    !containerName ||
+    !subnets ||
+    !securityGroups
+  )
+    throw new Error(
+      "Cluster settings must be passed in via environment variables"
+    );
+
   console.log(clusterArn);
   console.log(clusterLogGroupName);
   console.log(taskDefinitionArn);

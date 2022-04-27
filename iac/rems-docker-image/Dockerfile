@@ -9,7 +9,10 @@ ENTRYPOINT ["./docker-entrypoint.sh"]
 # https://github.com/team-carepay/carepool-aws-jdbc
 
 # For documentation see docs/installing-upgrading.md
-ADD https://github.com/CSCfi/rems/releases/download/v2.25/rems.jar /rems/rems.jar
+# ADD https://github.com/CSCfi/rems/releases/download/v2.25/rems.jar /rems/rems.jar
+
+# if adding dev rems builds, copy the rems jar direct into this folder for deployment
+ADD rems.jar /rems/rems.jar
 
 COPY docker-entrypoint.sh /rems/docker-entrypoint.sh
 

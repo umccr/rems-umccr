@@ -1,5 +1,10 @@
 #!/bin/zsh
 
+#
+# Executes a REMS CMD inside the deployed REMS environment
+#
+
+
 set -o errexit
 
 # the namespace must pre-exist as a CloudMap namespace in the account of deployment
