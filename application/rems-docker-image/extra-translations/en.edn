@@ -1,7 +1,7 @@
 {:t
  {:login
   {:intro      [:div
-                [:h1 "Welcome to HGPP REMS"]
+                [:h1 "Welcome to REMS for UMCCR/Australian Genomics"]
                 [:p
                  "This is a demo environment for testing the REMS software. More information is available on "
                  [:a {:href "/extra-pages/about"} "About"]
@@ -10,5 +10,5 @@
    :login      "Login"
    :oidc-text  ""
    :oidc-title ""
-   :text       [:p "Please, login to access HGPP REMS."]
+   :text       [:p "Please login to make an application in REMS."]
    :title      ""}}}

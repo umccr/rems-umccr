@@ -13,6 +13,7 @@ import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { readFileSync } from "fs";
 import { STACK_DESCRIPTION, TAG_STACK_VALUE } from "./rems-constants";
+import { LinuxArmBuildImage } from "aws-cdk-lib/aws-codebuild";
 
 /**
  * Stack to hold the self mutating pipeline, and all the relevant settings for deployments
@@ -56,6 +57,9 @@ export class RemsPipelineStack extends Stack {
           }
         ),
         env: {},
+        buildEnvironment: {
+          buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_2_0,
+        },
         commands: [
           // need to think how to get pre-commit to run in CI given .git is not present
           // "pip install pre-commit",

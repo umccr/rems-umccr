@@ -5,7 +5,14 @@ import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
 import { SslPolicy } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
 import { ApplicationLoadBalancedFargateService } from "aws-cdk-lib/aws-ecs-patterns";
-import { Cluster, ContainerImage, LogDrivers } from "aws-cdk-lib/aws-ecs";
+import {
+  Cluster,
+  ContainerImage,
+  CpuArchitecture,
+  FargateTaskDefinition,
+  LogDrivers,
+  OperatingSystemFamily,
+} from "aws-cdk-lib/aws-ecs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 
 type Props = {
@@ -64,6 +71,35 @@ export class DockerServiceWithHttpsLoadBalancerConstruct extends Construct {
       retention: RetentionDays.ONE_WEEK,
     });
 
+    // we do the task definition by hand as we have some specialised settings
+    const taskDefinition = new FargateTaskDefinition(this, "TaskDef", {
+      runtimePlatform: {
+        operatingSystemFamily: OperatingSystemFamily.LINUX,
+        cpuArchitecture: CpuArchitecture.ARM64,
+      },
+      memoryLimitMiB: props.memoryLimitMiB,
+      cpu: props.cpu,
+      // were we to need to make these anything but default this is where
+      // executionRole: taskImageOptions.executionRole,
+      // taskRole: taskImageOptions.taskRole,
+      // family: taskImageOptions.family,
+    });
+
+    const containerName = props.containerName;
+    const container = taskDefinition.addContainer(containerName, {
+      image: ContainerImage.fromDockerImageAsset(props.imageAsset),
+      cpu: props.cpu,
+      memoryLimitMiB: props.memoryLimitMiB,
+      environment: props.environment,
+      logging: LogDrivers.awsLogs({
+        streamPrefix: "rems",
+        logGroup: this.clusterLogGroup,
+      }),
+    });
+    container.addPortMappings({
+      containerPort: 80,
+    });
+
     // a load balanced fargate service hosted on an SSL host
     this.service = new ApplicationLoadBalancedFargateService(this, "Service", {
       cluster: this.cluster,
@@ -72,21 +108,10 @@ export class DockerServiceWithHttpsLoadBalancerConstruct extends Construct {
       domainName: `${props.hostedPrefix}.${props.hostedZoneName}`,
       domainZone: domainZone,
       redirectHTTP: true,
-      memoryLimitMiB: props.memoryLimitMiB,
-      cpu: props.cpu,
       desiredCount: props.desiredCount,
       publicLoadBalancer: true,
       securityGroups: props.securityGroups,
-      taskImageOptions: {
-        logDriver: LogDrivers.awsLogs({
-          streamPrefix: "rems",
-          logGroup: this.clusterLogGroup,
-        }),
-        containerName: props.containerName,
-        image: ContainerImage.fromDockerImageAsset(props.imageAsset),
-        containerPort: 80,
-        environment: props.environment,
-      },
+      taskDefinition: taskDefinition,
     });
 
     if (props.healthCheckPath) {

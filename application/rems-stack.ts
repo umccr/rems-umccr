@@ -24,7 +24,7 @@ import {
   PostgresEngineVersion,
 } from "aws-cdk-lib/aws-rds";
 import { DockerImageCode, DockerImageFunction } from "aws-cdk-lib/aws-lambda";
-import { DockerImageAsset } from "aws-cdk-lib/aws-ecr-assets";
+import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
 import * as path from "path";
 import { DockerServiceWithHttpsLoadBalancerConstruct } from "./lib/docker-service-with-https-load-balancer-construct";
 import { PublicAndNatVpc } from "./lib/network/nat-vpc";
@@ -124,7 +124,6 @@ export class RemsStack extends Stack {
 
     const asset = new DockerImageAsset(this, "RemsDockerImage", {
       directory: dockerImageFolder,
-
       buildArgs: {},
     });
 
