@@ -1,22 +1,12 @@
 #!/bin/bash
 
-certfile=$(ls /rems/certs 2>/dev/null)
-parameters=false
+# bring down GA4GH visa keys from secrets manager
+aws secretsmanager get-secret-value --secret-id RemsVisaJwk --query SecretString --output text > /rems/private-key.jwk
+jq < /rems/private-key.jwk '{kty,e,use,kid,alg,n}' > /rems/public-key.jwk
+
 cmd_prefix=""
 cmd=""
-full_cmd=""
 declare -a cmd_array
-
-if [ ! -z ${certfile} ] && [ "${certfile}" != "null" ] ; then
-    keytool -importcert -cacerts -noprompt \
-            -storepass changeit \
-            -file /rems/certs/${certfile} \
-            -alias ${certfile}
-
-    keytool -storepasswd -cacerts \
-            -storepass changeit  \
-            -new $(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 20)
-fi
 
 if [ "${CMD}" ] ; then
   IFS=';' read -r -a cmd_array <<< "${CMD}"

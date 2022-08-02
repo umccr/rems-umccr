@@ -12,7 +12,7 @@ CLOUD_MAP_SERVICE=$(head -3 rems-cloudmap-namespace.txt | tail -1)
 
 # when deployed our CDK will register the lambda into the namespace
 LAMBDA_ARN=$(aws servicediscovery discover-instances \
-           --namespace-name "$CLOUDMAP_MAP_NAMESPACE" \
+           --namespace-name "$CLOUD_MAP_NAMESPACE" \
            --service-name "$CLOUD_MAP_SERVICE" \
            --output text --query "Instances[].Attributes.lambdaArn")
 

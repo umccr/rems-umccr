@@ -36,20 +36,28 @@
 
  :application-deadline-days 4
  :application-id-column :generated-and-assigned-external-id
+
+ ;; Show "Assign external id" action button in UI for handlers
  :enable-assign-external-id-ui true
+
  :attachment-max-size 10000000 ;; 10MB
  :application-expiration nil
  :enable-pdf-api true
 
 
  :enable-permissions-api true
- ;; example keys from https://tools.ietf.org/html/rfc7517#appendix-A
- ;;:ga4gh-visa-private-key "./private-key.jwk"
- ;;:ga4gh-visa-public-key "./public-key.jwk"
+
+ ;; generate via https://mkjwk.org and stored in SecretsManager
+ :ga4gh-visa-private-key "./private-key.jwk"
+ :ga4gh-visa-public-key "./public-key.jwk"
+ ;;:ga4gh-visa-trusted-issuers []
+
+ :enable-catalogue-table false ; show catalogue page table of items
+ :enable-catalogue-tree true ; show catalogue page tree of items
 
  :catalogue-is-public true
  :accessibility-report true
  :enable-ega false
  :enable-doi true
  :enable-duo true
- :enable-catalogue-tree true}
+}

@@ -1,5 +1,7 @@
 # NOTE: we specify amd64 to allow builds on Mac M1... the resulting Fargate only supports amd64
-FROM amd64/openjdk:18-slim
+FROM amazoncorretto:18.0.2-al2
+
+RUN yum -y install jq awscli
 
 RUN mkdir /rems
 WORKDIR /rems
@@ -22,6 +24,5 @@ COPY extra-translations/ ./extra-translations/
 COPY config.edn /rems/config.edn
 COPY theme.edn /rems/theme.edn
 COPY logback.xml /rems/logback.xml
-# COPY *.jwk /rems/
 
-RUN chmod 664 /usr/local/openjdk-18/lib/security/cacerts
+# RUN chmod 664 /usr/local/openjdk-18/lib/security/cacerts
