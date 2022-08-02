@@ -124,6 +124,7 @@ export class RemsStack extends Stack {
 
     const asset = new DockerImageAsset(this, "RemsDockerImage", {
       directory: dockerImageFolder,
+      platform: Platform.LINUX_ARM64,
       buildArgs: {},
     });
 
