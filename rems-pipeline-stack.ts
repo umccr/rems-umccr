@@ -46,6 +46,20 @@ export class RemsPipelineStack extends Stack {
       // turned on because our stack makes docker assets
       dockerEnabledForSynth: true,
       dockerEnabledForSelfMutation: true,
+      codeBuildDefaults: {
+        buildEnvironment: {
+          buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_2_0,
+        },
+        // see https://github.com/aws/aws-cdk/issues/20739 (should be able to remove soon)
+        partialBuildSpec: BuildSpec.fromObject({
+          phases: {
+            install: {
+              // bump old nodejs to 16 or else cdk don't work
+              commands: ["n 16.15.1"],
+            },
+          },
+        }),
+      },
       synth: new pipelines.CodeBuildStep("Synth", {
         // Use a connection created using the AWS console to authenticate to GitHub
         // Other sources are available.
@@ -57,17 +71,6 @@ export class RemsPipelineStack extends Stack {
           }
         ),
         env: {},
-        buildEnvironment: {
-          buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_2_0,
-        },
-        // see https://github.com/aws/aws-cdk/issues/20739 (should be able to remove soon)
-        partialBuildSpec: BuildSpec.fromObject({
-          phases: {
-            install: {
-              commands: ["n 16.15.1"],
-            },
-          },
-        }),
         commands: [
           // need to think how to get pre-commit to run in CI given .git is not present
           // "pip install pre-commit",
