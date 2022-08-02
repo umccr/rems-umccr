@@ -164,6 +164,17 @@ export class RemsStack extends Stack {
         }
       );
 
+    privateServiceWithLoadBalancer.service.taskDefinition.taskRole.attachInlinePolicy(
+      new Policy(this, "FargateServiceTaskPolicy", {
+        statements: [
+          new PolicyStatement({
+            actions: ["secretsmanager:GetSecretValue"],
+            resources: ["arn:aws:secretsmanager:*:*:secret:RemsVisaJwk-??????"],
+          }),
+        ],
+      })
+    );
+
     // the command function is an invocable lambda that will then go and spin up an ad-hoc Task in our
     // cluster - we use this for starting admin tasks
     const commandFunction = this.addCommandLambda(
@@ -338,6 +349,10 @@ export class RemsStack extends Stack {
     f.role?.attachInlinePolicy(
       new Policy(this, "CommandTasksPolicy", {
         statements: [
+          new PolicyStatement({
+            actions: ["secretsmanager:GetSecretValue"],
+            resources: ["arn:aws:secretsmanager:*:*:secret:RemsVisaJwk-??????"],
+          }),
           // restricted to running our task only on our cluster
           new PolicyStatement({
             actions: ["ecs:RunTask"],
