@@ -21,8 +21,7 @@ export class RemsPipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    super.tags.setTag("Stack", TAG_STACK_VALUE);
-
+    this.tags.setTag("Stack", TAG_STACK_VALUE);
     this.templateOptions.description = STACK_DESCRIPTION;
 
     // these are *build* parameters that we either want to re-use across lots of stacks, or are
