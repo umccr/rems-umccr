@@ -58,10 +58,16 @@ export class RemsPipelineStack extends Stack {
         ),
         env: {},
         buildEnvironment: {
-          buildImage: LinuxArmBuildImage.fromCodeBuildImageId(
-            "aws/codebuild/amazonlinux2-aarch64-standard:4.0"
-          ),
+          buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_2_0,
         },
+        // see https://github.com/aws/aws-cdk/issues/20739 (should be able to remove soon)
+        partialBuildSpec: BuildSpec.fromObject({
+          phases: {
+            install: {
+              commands: ["n 16.15.1"],
+            },
+          },
+        }),
         commands: [
           // need to think how to get pre-commit to run in CI given .git is not present
           // "pip install pre-commit",
