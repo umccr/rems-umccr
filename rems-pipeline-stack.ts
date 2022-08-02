@@ -12,6 +12,7 @@ import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { readFileSync } from "fs";
+import { STACK_DESCRIPTION, TAG_STACK_VALUE } from "./rems-constants";
 
 /**
  * Stack to hold the self mutating pipeline, and all the relevant settings for deployments
@@ -19,6 +20,10 @@ import { readFileSync } from "fs";
 export class RemsPipelineStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
+
+    super.tags.setTag("Stack", TAG_STACK_VALUE);
+
+    this.templateOptions.description = STACK_DESCRIPTION;
 
     // these are *build* parameters that we either want to re-use across lots of stacks, or are
     // 'sensitive' enough we don't want them checked into Git - but not sensitive enough to record as a Secret
