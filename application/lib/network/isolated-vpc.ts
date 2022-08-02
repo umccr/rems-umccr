@@ -1,17 +1,10 @@
 import { Construct } from "constructs";
-import { DockerImageAsset } from "aws-cdk-lib/aws-ecr-assets";
-import { HostedZone } from "aws-cdk-lib/aws-route53";
-import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
-import { SslPolicy } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import {
   GatewayVpcEndpointAwsService,
   InterfaceVpcEndpointAwsService,
   SubnetType,
   Vpc,
 } from "aws-cdk-lib/aws-ec2";
-import { ApplicationLoadBalancedFargateService } from "aws-cdk-lib/aws-ecs-patterns";
-import { Cluster, ContainerImage } from "aws-cdk-lib/aws-ecs";
-import { StringParameter } from "aws-cdk-lib/aws-ssm";
 
 type Props = {
   awsPrivateLinksServices: InterfaceVpcEndpointAwsService[];

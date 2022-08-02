@@ -12,16 +12,13 @@ import {
   InstanceType,
   IVpc,
   Port,
-  PublicSubnet,
   SecurityGroup,
   SubnetSelection,
   SubnetType,
 } from "aws-cdk-lib/aws-ec2";
 import {
-  AuroraPostgresEngineVersion,
   Credentials,
   DatabaseCluster,
-  DatabaseClusterEngine,
   DatabaseInstance,
   DatabaseInstanceEngine,
   PostgresEngineVersion,
@@ -36,56 +33,58 @@ import { Cluster, TaskDefinition } from "aws-cdk-lib/aws-ecs";
 import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
 import { ISecret } from "aws-cdk-lib/aws-secretsmanager";
+import { RemsSettings } from "./rems-settings";
+import { STACK_DESCRIPTION } from "../rems-constants";
+import { StringParameter } from "aws-cdk-lib/aws-ssm";
 
 // these are settings for the database *within* the RDS instance, and the postgres user name
 // they really shouldn't need to be changed but I will define them here as constants in case
 const FIXED_DATABASE_NAME = "rems";
 const FIXED_DATABASE_USER = "rems";
 const FIXED_CONTAINER_NAME = "rems";
-const FIXED_SERVICE_NAME = "rems";
 
 export class RemsStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  public readonly deployUrlOutput: CfnOutput;
+
+  constructor(scope: Construct, id: string, props: StackProps & RemsSettings) {
     super(scope, id, props);
 
-    const cloudMapNamespace = this.node.tryGetContext("cloudMapNamespace");
-    const cloudMapId = this.node.tryGetContext("cloudMapId");
-    const hostedPrefix = this.node.tryGetContext("hostedPrefix");
-    const hostedZoneName = this.node.tryGetContext("hostedZoneName");
-    const hostedZoneCert = this.node.tryGetContext("hostedZoneCert");
-    const oidcMetadataUrl = this.node.tryGetContext("oidcMetadataUrl");
-    const oidcClientId = this.node.tryGetContext("oidcClientId");
-    const oidcClientSecret = this.node.tryGetContext("oidcClientSecret");
-    const smtpHost = this.node.tryGetContext("smtpHost");
-    const smtpMailFrom = this.node.tryGetContext("smtpMailFrom");
-    const smtpUser = this.node.tryGetContext("smtpUser");
-    const smtpPassword = this.node.tryGetContext("smtpPassword");
+    this.templateOptions.description = STACK_DESCRIPTION;
 
-    // if present "yes" - indicates we want to prefer multi instances/clusters over availability zones
-    const highlyAvailableString = this.node.tryGetContext("highlyAvailable");
-    const highlyAvailable =
-      highlyAvailableString &&
-      (highlyAvailableString.toLowerCase().startsWith("y") || // yes
-        highlyAvailableString.toLowerCase().startsWith("t") || // true
-        highlyAvailableString.toLowerCase() === "1");
-
-    if (
-      !cloudMapNamespace ||
-      !cloudMapId ||
-      !hostedPrefix ||
-      !hostedZoneName ||
-      !hostedZoneCert ||
-      !oidcMetadataUrl ||
-      !oidcClientId ||
-      !oidcClientSecret ||
-      !smtpHost ||
-      !smtpMailFrom ||
-      !smtpUser ||
-      !smtpPassword
-    )
-      throw new Error(
-        "Context values must be passed into CDK invocation to set some important mandatory deployment settings"
-      );
+    // we have some parameters that are shared amongst a lot of stacks - and rather than repeat in each repo,
+    // we look them on synthesis from parameter store
+    const hostedZoneName = StringParameter.valueFromLookup(
+      this,
+      "hosted_zone_name"
+    );
+    const certApse2Arn = StringParameter.valueFromLookup(
+      this,
+      "cert_apse2_arn"
+    );
+    const smtpSendHost = StringParameter.valueFromLookup(
+      this,
+      "smtp_send_host"
+    );
+    const smtpSendUser = StringParameter.valueFromLookup(
+      this,
+      "smtp_send_user"
+    );
+    const smtpSendPassword = StringParameter.valueFromLookup(
+      this,
+      "smtp_send_password"
+    );
+    const oidcMetadataUrl = StringParameter.valueFromLookup(
+      this,
+      "/rems/google/oauth_metadata_url"
+    );
+    const oidcClientId = StringParameter.valueFromLookup(
+      this,
+      "/rems/google/oauth_client_id"
+    );
+    const oidcClientSecret = StringParameter.valueFromLookup(
+      this,
+      "/rems/google/oauth_client_secret"
+    );
 
     const vpc = new PublicAndNatVpc(this, "Vpc", {});
     const subnetSelection: SubnetSelection = {
@@ -116,7 +115,6 @@ export class RemsStack extends Stack {
 
     // create the db instance or cluster
     const [db, remsDatabaseUrl] = this.addDatabase(
-      highlyAvailable,
       vpc,
       subnetSelection,
       dbAndClusterSecurityGroup
@@ -137,13 +135,13 @@ export class RemsStack extends Stack {
         {
           vpc: vpc,
           securityGroups: [dbAndClusterSecurityGroup],
-          hostedPrefix: hostedPrefix,
+          hostedPrefix: props.hostedPrefix,
           hostedZoneName: hostedZoneName,
-          hostedZoneCertArn: hostedZoneCert,
+          hostedZoneCertArn: certApse2Arn,
           imageAsset: asset,
-          memoryLimitMiB: 2048,
+          memoryLimitMiB: props.memoryLimitMiB,
           cpu: 1024,
-          desiredCount: highlyAvailable ? 2 : 1,
+          desiredCount: 1,
           containerName: FIXED_CONTAINER_NAME,
           healthCheckPath: "/",
           environment: {
@@ -155,12 +153,12 @@ export class RemsStack extends Stack {
             OIDC_METADATA_URL: oidcMetadataUrl,
             OIDC_CLIENT_ID: oidcClientId,
             OIDC_CLIENT_SECRET: oidcClientSecret,
-            PUBLIC_URL: `https://${hostedPrefix}.${hostedZoneName}/`,
-            SMTP__HOST: smtpHost,
+            PUBLIC_URL: `https://${props.hostedPrefix}.${hostedZoneName}/`,
+            SMTP__HOST: smtpSendHost,
             SMTP__PORT: "587",
-            SMTP__USER: smtpUser,
-            SMTP__PASS: smtpPassword,
-            MAIL_FROM: smtpMailFrom,
+            SMTP__USER: smtpSendUser,
+            SMTP__PASS: smtpSendPassword,
+            MAIL_FROM: props.smtpMailFrom,
             SMTP_DEBUG: "true",
           },
         }
@@ -187,14 +185,14 @@ export class RemsStack extends Stack {
         // passing an empty string does work
         namespaceArn: "",
         // this is also a bug? surely we should be able to look up a namespace just by name
-        namespaceId: cloudMapId,
-        namespaceName: cloudMapNamespace,
+        namespaceId: props.cloudMapId,
+        namespaceName: props.cloudMapNamespace,
       }
     );
 
     const service = new Service(this, "Service", {
       namespace: namespace,
-      name: FIXED_SERVICE_NAME,
+      name: props.cloudMapServiceName,
       description: "Service for working with REMS",
     });
 
@@ -214,6 +212,10 @@ export class RemsStack extends Stack {
       value:
         privateServiceWithLoadBalancer.service.taskDefinition.taskDefinitionArn,
     });
+
+    this.deployUrlOutput = new CfnOutput(this, "RemsDeployUrl", {
+      value: `https://${props.hostedPrefix}.${hostedZoneName}`,
+    });
   }
 
   /**
@@ -221,14 +223,12 @@ export class RemsStack extends Stack {
    * setting). Returns the relevant cluster or instance, as well as a URL suitable for connecting
    * to the instance.
    *
-   * @param highlyAvailable whether to ask for an instance or a cluster
    * @param vpc the VPC to put the db in
    * @param subnetSelection the subnet in the VPC to put the db in
    * @param securityGroup the security group to assign to the db
    * @private
    */
   private addDatabase(
-    highlyAvailable: boolean,
     vpc: IVpc,
     subnetSelection: SubnetSelection,
     securityGroup: SecurityGroup
@@ -246,45 +246,23 @@ export class RemsStack extends Stack {
     let dbSocketAddress: string;
     let dbSecret: ISecret;
 
-    if (highlyAvailable) {
-      db = new DatabaseCluster(this, "Database", {
-        removalPolicy: RemovalPolicy.DESTROY,
-        engine: DatabaseClusterEngine.auroraPostgres({
-          version: AuroraPostgresEngineVersion.VER_13_4,
-        }),
-        credentials: dbCreds,
-        defaultDatabaseName: FIXED_DATABASE_NAME,
-        instanceProps: {
-          instanceType: InstanceType.of(
-            InstanceClass.BURSTABLE4_GRAVITON,
-            InstanceSize.LARGE
-          ),
-          vpcSubnets: subnetSelection,
-          vpc: vpc,
-          securityGroups: [securityGroup],
-        },
-      });
-      dbSocketAddress = (db as DatabaseCluster).clusterEndpoint.socketAddress;
-      dbSecret = (db as DatabaseCluster).secret!;
-    } else {
-      db = new DatabaseInstance(this, "Database", {
-        removalPolicy: RemovalPolicy.DESTROY,
-        engine: DatabaseInstanceEngine.postgres({
-          version: PostgresEngineVersion.VER_14,
-        }),
-        credentials: dbCreds,
-        databaseName: FIXED_DATABASE_NAME,
-        instanceType: InstanceType.of(
-          InstanceClass.BURSTABLE4_GRAVITON,
-          InstanceSize.SMALL
-        ),
-        vpc: vpc,
-        vpcSubnets: subnetSelection,
-        securityGroups: [securityGroup],
-      });
-      dbSocketAddress = (db as DatabaseInstance).instanceEndpoint.socketAddress;
-      dbSecret = (db as DatabaseInstance).secret!;
-    }
+    db = new DatabaseInstance(this, "Database", {
+      removalPolicy: RemovalPolicy.DESTROY,
+      engine: DatabaseInstanceEngine.postgres({
+        version: PostgresEngineVersion.VER_14,
+      }),
+      credentials: dbCreds,
+      databaseName: FIXED_DATABASE_NAME,
+      instanceType: InstanceType.of(
+        InstanceClass.BURSTABLE4_GRAVITON,
+        InstanceSize.SMALL
+      ),
+      vpc: vpc,
+      vpcSubnets: subnetSelection,
+      securityGroups: [securityGroup],
+    });
+    dbSocketAddress = (db as DatabaseInstance).instanceEndpoint.socketAddress;
+    dbSecret = (db as DatabaseInstance).secret!;
 
     // the REMS user and db will have been already created as part of the DB instance/cluster construction
     const remsDatabaseUrl = `postgresql://${dbSocketAddress}/rems?user=${FIXED_DATABASE_USER}&password=${dbSecret.secretValueFromJson(
@@ -329,6 +307,10 @@ export class RemsStack extends Stack {
       "rems-command-invoke-lambda-docker-image"
     );
 
+    // this command lambda does almost nothing itself - all it does is trigger the creation of
+    // a fargate task and then tracks that to completion - and returns the logs path
+    // so it needs very little memory - but up to 14 mins runtime as sometimes the fargate
+    // tasks are a bit slow
     const f = new DockerImageFunction(this, "CommandLambda", {
       memorySize: 128,
       code: DockerImageCode.fromImageAsset(dockerImageFolder),

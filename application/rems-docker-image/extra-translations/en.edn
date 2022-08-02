@@ -1,0 +1,14 @@
+{:t
+ {:login
+  {:intro      [:div
+                [:h1 "Welcome to HGPP REMS"]
+                [:p
+                 "This is a demo environment for testing the REMS software. More information is available on "
+                 [:a {:href "/extra-pages/about"} "About"]
+                 " page."]]
+   :intro2     "A second intro!"
+   :login      "Login"
+   :oidc-text  ""
+   :oidc-title ""
+   :text       [:p "Please, login to access HGPP REMS."]
+   :title      ""}}}

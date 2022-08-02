@@ -4,16 +4,16 @@
 # Executes a REMS CMD inside the deployed REMS environment
 #
 
-
 set -o errexit
 
 # the namespace must pre-exist as a CloudMap namespace in the account of deployment
-CLOUDMAP_NAMESPACE=$(<rems-cloudmap-namespace.txt)
+CLOUD_MAP_NAMESPACE=$(head -1 rems-cloudmap-namespace.txt)
+CLOUD_MAP_SERVICE=$(head -3 rems-cloudmap-namespace.txt | tail -1)
 
 # when deployed our CDK will register the lambda into the namespace
 LAMBDA_ARN=$(aws servicediscovery discover-instances \
-           --namespace-name "$CLOUDMAP_NAMESPACE" \
-           --service-name "rems" \
+           --namespace-name "$CLOUDMAP_MAP_NAMESPACE" \
+           --service-name "$CLOUD_MAP_SERVICE" \
            --output text --query "Instances[].Attributes.lambdaArn")
 
 echo "Task command executions can take a while - this CLI tool will wait (possibly 10 minutes)"
@@ -36,4 +36,4 @@ LG=$(jq < "$temp_file" -r '.logGroupName')
 LS=$(jq < "$temp_file" -r '.logStreamName')
 
 # and now we can print the log output (which is the CMD output)
-aws logs tail "$LG" --log-stream-names "$LS"
+aws logs tail "$LG" --log-stream-names "$LS" | cut -d' ' -f3-
