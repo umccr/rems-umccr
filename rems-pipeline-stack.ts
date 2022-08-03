@@ -1,16 +1,8 @@
-import {
-  pipelines,
-  Stack,
-  StackProps,
-  Stage,
-  StageProps,
-  Token,
-} from "aws-cdk-lib";
+import { pipelines, Stack, StackProps } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { RemsBuildStage } from "./rems-build-stage";
-import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
-import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { readFileSync } from "fs";
 import { STACK_DESCRIPTION, TAG_STACK_VALUE } from "./rems-constants";
 import { BuildSpec, LinuxArmBuildImage } from "aws-cdk-lib/aws-codebuild";
@@ -27,17 +19,10 @@ export class RemsPipelineStack extends Stack {
 
     // these are *build* parameters that we either want to re-use across lots of stacks, or are
     // 'sensitive' enough we don't want them checked into Git - but not sensitive enough to record as a Secret
+    // NOTE: these are looked up at the *build pipeline deploy* stage
     const codeStarArn = StringParameter.valueFromLookup(
       this,
       "codestar_github_arn"
-    );
-    const nctsClientId = StringParameter.valueFromLookup(
-      this,
-      "ncts_client_id"
-    );
-    const nctsClientSecret = StringParameter.valueFromLookup(
-      this,
-      "ncts_client_secret"
     );
 
     const pipeline = new pipelines.CodePipeline(this, "Pipeline", {
@@ -72,11 +57,8 @@ export class RemsPipelineStack extends Stack {
         ),
         env: {},
         commands: [
-          // need to think how to get pre-commit to run in CI given .git is not present
-          // "pip install pre-commit",
-          // "git init . && pre-commit run --all-files",
           "npm ci",
-          // our cdk is configured to use ts-node - so we don't need any build step - just synth
+          // our cdk is configured to use ts-node - so we don't need any typescript build step - just synth
           "npx cdk synth",
         ],
         rolePolicyStatements: [
@@ -107,6 +89,11 @@ export class RemsPipelineStack extends Stack {
     const cloudMapServiceName = cloudMapLines[2].trim();
     const hostedPrefix = "rems";
     const smtpMailFrom = "rems@umccr.org";
+    // we place the OAuth id/secrets into parameter store in each account
+    const parameterNameOidcClientId = "/rems/cilogon/oauth_client_id";
+    const parameterNameOidcClientSecret = "/rems/cilogon/oauth_client_secret";
+    const parameterNameOidcClientMetadataUrl =
+      "/rems/cilogon/oauth_metadata_url";
 
     const devStage = new RemsBuildStage(this, "Dev", {
       env: {
@@ -117,8 +104,12 @@ export class RemsPipelineStack extends Stack {
       cloudMapId: cloudMapId,
       cloudMapServiceName: cloudMapServiceName,
       hostedPrefix: hostedPrefix,
+      parameterNameOidcClientId: parameterNameOidcClientId,
+      parameterNameOidcClientSecret: parameterNameOidcClientSecret,
+      parameterNameOidcClientMetadataUrl: parameterNameOidcClientMetadataUrl,
       smtpMailFrom: smtpMailFrom,
       memoryLimitMiB: 2048,
+      cpu: 1024,
     });
 
     const prodStage = new RemsBuildStage(this, "Prod", {
@@ -130,8 +121,12 @@ export class RemsPipelineStack extends Stack {
       cloudMapId: cloudMapId,
       cloudMapServiceName: cloudMapServiceName,
       hostedPrefix: hostedPrefix,
+      parameterNameOidcClientId: parameterNameOidcClientId,
+      parameterNameOidcClientSecret: parameterNameOidcClientSecret,
+      parameterNameOidcClientMetadataUrl: parameterNameOidcClientMetadataUrl,
       smtpMailFrom: smtpMailFrom,
       memoryLimitMiB: 2048,
+      cpu: 1024,
     });
 
     pipeline.addStage(devStage, {
@@ -141,10 +136,10 @@ export class RemsPipelineStack extends Stack {
             DEPLOYED_URL: devStage.deployUrlOutput,
           },
           commands: [
-            "echo DEPLOYED_URL",
-            // "cd test/onto-cli",
+            "echo $DEPLOYED_URL",
+            // "cd test",
             // "npm ci",
-            // `npm run test -- "$FHIR_BASE_URL"`,
+            // `npm run test -- "$DEPLOYED_URL"`,
           ],
         }),
       ],

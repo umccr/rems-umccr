@@ -75,15 +75,15 @@ export class RemsStack extends Stack {
     );
     const oidcMetadataUrl = StringParameter.valueFromLookup(
       this,
-      "/rems/google/oauth_metadata_url"
+      props.parameterNameOidcClientMetadataUrl
     );
     const oidcClientId = StringParameter.valueFromLookup(
       this,
-      "/rems/google/oauth_client_id"
+      props.parameterNameOidcClientId
     );
     const oidcClientSecret = StringParameter.valueFromLookup(
       this,
-      "/rems/google/oauth_client_secret"
+      props.parameterNameOidcClientSecret
     );
 
     const vpc = new PublicAndNatVpc(this, "Vpc", {});
@@ -140,7 +140,7 @@ export class RemsStack extends Stack {
           hostedZoneCertArn: certApse2Arn,
           imageAsset: asset,
           memoryLimitMiB: props.memoryLimitMiB,
-          cpu: 1024,
+          cpu: props.cpu,
           desiredCount: 1,
           containerName: FIXED_CONTAINER_NAME,
           healthCheckPath: "/",

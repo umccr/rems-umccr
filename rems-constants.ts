@@ -8,5 +8,3 @@ export const TAG_STACK_VALUE = "Rems";
  */
 export const STACK_DESCRIPTION =
   "Rems is a web site for managing applications for controlled datasets";
-
-export const HOST_PREFIX = "onto";

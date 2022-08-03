@@ -1,6 +1,7 @@
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 import { RemsPipelineStack } from "./rems-pipeline-stack";
+import { TAG_STACK_VALUE } from "./rems-constants";
 
 const AWS_BUILD_ACCOUNT = "383856791668";
 const AWS_BUILD_REGION = "ap-southeast-2";
@@ -14,6 +15,6 @@ new RemsPipelineStack(app, "RemsPipelineStack", {
     region: AWS_BUILD_REGION,
   },
   tags: {
-    Stack: "Rems",
+    Stack: TAG_STACK_VALUE,
   },
 });
