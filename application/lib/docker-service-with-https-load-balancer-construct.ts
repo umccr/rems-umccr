@@ -3,7 +3,7 @@ import { DockerImageAsset } from "aws-cdk-lib/aws-ecr-assets";
 import { HostedZone } from "aws-cdk-lib/aws-route53";
 import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
 import { SslPolicy } from "aws-cdk-lib/aws-elasticloadbalancingv2";
-import { SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
+import { SecurityGroup, IVpc } from "aws-cdk-lib/aws-ec2";
 import { ApplicationLoadBalancedFargateService } from "aws-cdk-lib/aws-ecs-patterns";
 import {
   Cluster,
@@ -17,7 +17,7 @@ import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 
 type Props = {
   // the VPC to place the cluster in
-  vpc: Vpc;
+  vpc: IVpc;
   // the security groups to associate the cluster/service with
   securityGroups: SecurityGroup[];
 

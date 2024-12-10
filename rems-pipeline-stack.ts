@@ -33,17 +33,8 @@ export class RemsPipelineStack extends Stack {
       dockerEnabledForSelfMutation: true,
       codeBuildDefaults: {
         buildEnvironment: {
-          buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_2_0,
+          buildImage: LinuxArmBuildImage.AMAZON_LINUX_2_STANDARD_3_0,
         },
-        // see https://github.com/aws/aws-cdk/issues/20739 (should be able to remove soon)
-        partialBuildSpec: BuildSpec.fromObject({
-          phases: {
-            install: {
-              // bump old nodejs to 16 or else cdk don't work
-              commands: ["n 16.15.1"],
-            },
-          },
-        }),
       },
       synth: new pipelines.CodeBuildStep("Synth", {
         // Use a connection created using the AWS console to authenticate to GitHub
@@ -57,6 +48,7 @@ export class RemsPipelineStack extends Stack {
         ),
         env: {},
         commands: [
+          "n 22",
           "npm ci",
           // our cdk is configured to use ts-node - so we don't need any typescript build step - just synth
           "npx cdk synth",
@@ -89,63 +81,22 @@ export class RemsPipelineStack extends Stack {
     const cloudMapServiceName = cloudMapLines[2].trim();
     const hostedPrefix = "rems";
     const smtpMailFrom = "rems@umccr.org";
-    // we place the OAuth id/secrets into parameter store in each account
-    const parameterNameOidcClientId = "/rems/cilogon/oauth_client_id";
-    const parameterNameOidcClientSecret = "/rems/cilogon/oauth_client_secret";
-    const parameterNameOidcClientMetadataUrl =
-      "/rems/cilogon/oauth_metadata_url";
 
-    const devStage = new RemsBuildStage(this, "Dev", {
+    const dcStage = new RemsBuildStage(this, "DataControl", {
       env: {
-        account: "843407916570",
+        account: "503561413336",
         region: "ap-southeast-2",
       },
       cloudMapNamespace: cloudMapNamespace,
       cloudMapId: cloudMapId,
       cloudMapServiceName: cloudMapServiceName,
       hostedPrefix: hostedPrefix,
-      parameterNameOidcClientId: parameterNameOidcClientId,
-      parameterNameOidcClientSecret: parameterNameOidcClientSecret,
-      parameterNameOidcClientMetadataUrl: parameterNameOidcClientMetadataUrl,
       smtpMailFrom: smtpMailFrom,
       memoryLimitMiB: 2048,
       cpu: 1024,
     });
 
-    const prodStage = new RemsBuildStage(this, "Prod", {
-      env: {
-        account: "472057503814",
-        region: "ap-southeast-2",
-      },
-      cloudMapNamespace: cloudMapNamespace,
-      cloudMapId: cloudMapId,
-      cloudMapServiceName: cloudMapServiceName,
-      hostedPrefix: hostedPrefix,
-      parameterNameOidcClientId: parameterNameOidcClientId,
-      parameterNameOidcClientSecret: parameterNameOidcClientSecret,
-      parameterNameOidcClientMetadataUrl: parameterNameOidcClientMetadataUrl,
-      smtpMailFrom: smtpMailFrom,
-      memoryLimitMiB: 2048,
-      cpu: 1024,
-    });
-
-    pipeline.addStage(devStage, {
-      post: [
-        new pipelines.ShellStep("Validate Endpoint", {
-          envFromCfnOutputs: {
-            DEPLOYED_URL: devStage.deployUrlOutput,
-          },
-          commands: [
-            "echo $DEPLOYED_URL",
-            // "cd test",
-            // "npm ci",
-            // `npm run test -- "$DEPLOYED_URL"`,
-          ],
-        }),
-      ],
-    });
-
-    pipeline.addStage(prodStage, {
+    pipeline.addStage(dcStage, {
       pre: [new pipelines.ManualApprovalStep("PromoteToProd")],
     });
   }

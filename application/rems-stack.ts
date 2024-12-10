@@ -15,6 +15,7 @@ import {
   SecurityGroup,
   SubnetSelection,
   SubnetType,
+  Vpc,
 } from "aws-cdk-lib/aws-ec2";
 import {
   Credentials,
@@ -27,7 +28,6 @@ import { DockerImageCode, DockerImageFunction } from "aws-cdk-lib/aws-lambda";
 import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
 import * as path from "path";
 import { DockerServiceWithHttpsLoadBalancerConstruct } from "./lib/docker-service-with-https-load-balancer-construct";
-import { PublicAndNatVpc } from "./lib/network/nat-vpc";
 import { HttpNamespace, Service } from "aws-cdk-lib/aws-servicediscovery";
 import { Cluster, TaskDefinition } from "aws-cdk-lib/aws-ecs";
 import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
@@ -61,40 +61,14 @@ export class RemsStack extends Stack {
       this,
       "cert_apse2_arn"
     );
-    const smtpSendHost = StringParameter.valueFromLookup(
-      this,
-      "smtp_send_host"
-    );
-    const smtpSendUser = StringParameter.valueFromLookup(
-      this,
-      "smtp_send_user"
-    );
-    const smtpSendPassword = StringParameter.valueFromLookup(
-      this,
-      "smtp_send_password"
-    );
-    const oidcMetadataUrl = StringParameter.valueFromLookup(
-      this,
-      props.parameterNameOidcClientMetadataUrl
-    );
-    const oidcClientId = StringParameter.valueFromLookup(
-      this,
-      props.parameterNameOidcClientId
-    );
-    const oidcClientSecret = StringParameter.valueFromLookup(
-      this,
-      props.parameterNameOidcClientSecret
-    );
 
-    const vpc = new PublicAndNatVpc(this, "Vpc", {});
+    const vpc = Vpc.fromLookup(this, "VPC", { vpcName: "main-vpc" });
     const subnetSelection: SubnetSelection = {
-      subnetType: SubnetType.PRIVATE_WITH_NAT,
+      subnetType: SubnetType.PRIVATE_WITH_EGRESS,
     };
 
-    // because REMS does not use any native AWS features (makes no AWS calls) we would love it to be
-    // self-contained (no ingress/egress except to itself).
-    // However, the AWS container infrastructure does need to make log API calls to AWS.
-    // So we set this security group with outbound traffic on - but with ingress only from itself.
+    // we need to allow this to make AWS calls, but otherwise it does not interact with anything
+    // other than itself i.e. db <-> fargate
     const dbAndClusterSecurityGroup = new SecurityGroup(
       this,
       "DbAndClusterSecurityGroup",
@@ -108,10 +82,6 @@ export class RemsStack extends Stack {
       dbAndClusterSecurityGroup,
       Port.allTraffic()
     );
-
-    // Try to make this work? PrivateLink for ECS related services?
-    // allowAllOutbound: false,
-    // dbAndClusterSecurityGroup.addEgressRule(dbAndClusterSecurityGroup, Port.allTraffic());
 
     // create the db instance or cluster
     const [db, remsDatabaseUrl] = this.addDatabase(
@@ -147,17 +117,8 @@ export class RemsStack extends Stack {
           environment: {
             // rather than embed these in the config.edn that is checked into git -
             // we use the mechanism by which these settings can be made using environment variables
-            // and then allow these values to be fetched from parameterstore/secrets etc
-            // the *key* names here must match the config setting names from the EDN
             DATABASE_URL: remsDatabaseUrl,
-            OIDC_METADATA_URL: oidcMetadataUrl,
-            OIDC_CLIENT_ID: oidcClientId,
-            OIDC_CLIENT_SECRET: oidcClientSecret,
             PUBLIC_URL: `https://${props.hostedPrefix}.${hostedZoneName}/`,
-            SMTP__HOST: smtpSendHost,
-            SMTP__PORT: "587",
-            SMTP__USER: smtpSendUser,
-            SMTP__PASS: smtpSendPassword,
             MAIL_FROM: props.smtpMailFrom,
             SMTP_DEBUG: "true",
           },
@@ -169,7 +130,7 @@ export class RemsStack extends Stack {
         statements: [
           new PolicyStatement({
             actions: ["secretsmanager:GetSecretValue"],
-            resources: ["arn:aws:secretsmanager:*:*:secret:RemsVisaJwk-??????"],
+            resources: ["arn:aws:secretsmanager:*:*:secret:Rems*"],
           }),
         ],
       })
@@ -260,7 +221,7 @@ export class RemsStack extends Stack {
     db = new DatabaseInstance(this, "Database", {
       removalPolicy: RemovalPolicy.DESTROY,
       engine: DatabaseInstanceEngine.postgres({
-        version: PostgresEngineVersion.VER_14,
+        version: PostgresEngineVersion.VER_17,
       }),
       credentials: dbCreds,
       databaseName: FIXED_DATABASE_NAME,
@@ -351,7 +312,7 @@ export class RemsStack extends Stack {
         statements: [
           new PolicyStatement({
             actions: ["secretsmanager:GetSecretValue"],
-            resources: ["arn:aws:secretsmanager:*:*:secret:RemsVisaJwk-??????"],
+            resources: ["arn:aws:secretsmanager:*:*:secret:Rems*"],
           }),
           // restricted to running our task only on our cluster
           new PolicyStatement({

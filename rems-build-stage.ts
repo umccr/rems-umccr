@@ -5,7 +5,7 @@ import { RemsStack } from "./application/rems-stack";
 import { TAG_STACK_VALUE } from "./rems-constants";
 
 export class RemsBuildStage extends Stage {
-  // the output of what we believe will be the deployed REMS url (e.g. https://rems.dev.umccr.org)
+  // the output of what we believe will be the deployed REMS url (e.g. https://rems.dc.umccr.org)
   public readonly deployUrlOutput: CfnOutput;
 
   constructor(scope: Construct, id: string, props: StageProps & RemsSettings) {

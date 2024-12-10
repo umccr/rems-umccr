@@ -22,7 +22,7 @@ echo "Task command executions can take a while - this CLI tool will wait (possib
 # so we make a temp file to hold the result and set a trap to delete it
 temp_file=$(mktemp)
 
-trap "rm -f $temp_file" 0 2 3 15
+trap 'rm -f $temp_file' 0 2 3 15
 
 # our lambda knows how to pass cmd line strings to a spun up REMS container just for CMD invoking
 aws lambda invoke --function-name "$LAMBDA_ARN" \

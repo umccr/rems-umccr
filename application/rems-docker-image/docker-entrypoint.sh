@@ -1,7 +1,15 @@
 #!/bin/bash
 
+SM_SETTINGS="RemsPrivateSettings"
+SM_SETTINGS_VISA_JWK="RemsVisaJwk"
+
+# bring down various "private" environment settings like OIDC client etc
+# the use of eval (somewhat dangerous) here is mitigated by the fact the content must be valid JSON (to satisfy jq) and
+# that control over the secret in AWS is an admin level operation
+eval "export $(aws secretsmanager get-secret-value --secret-id $SM_SETTINGS --query SecretString --output text | jq -r 'to_entries | map("\(.key)=\(.value)") | @sh')"
+
 # bring down GA4GH visa keys from secrets manager
-aws secretsmanager get-secret-value --secret-id RemsVisaJwk --query SecretString --output text > /rems/private-key.jwk
+aws secretsmanager get-secret-value --secret-id $SM_SETTINGS_VISA_JWK --query SecretString --output text > /rems/private-key.jwk
 jq < /rems/private-key.jwk '{kty,e,use,kid,alg,n}' > /rems/public-key.jwk
 
 cmd_prefix=""

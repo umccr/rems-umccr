@@ -8,7 +8,7 @@ RUN mkdir /rems
 WORKDIR /rems
 
 # For documentation see docs/installing-upgrading.md
-ADD https://github.com/CSCfi/rems/releases/download/v2.27/rems.jar /rems/rems.jar
+ADD https://github.com/CSCfi/rems/releases/download/v2.38/rems.jar /rems/rems.jar
 
 # if adding dev rems builds, copy the rems jar direct into this folder for deployment
 # ADD rems.jar /rems/rems.jar

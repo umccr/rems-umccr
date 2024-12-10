@@ -21,13 +21,6 @@ export interface RemsSettings {
   readonly hostedPrefix: string;
 
   /**
-   * Parameter store _names_ for these OIDC settings
-   */
-  readonly parameterNameOidcClientId: string;
-  readonly parameterNameOidcClientSecret: string;
-  readonly parameterNameOidcClientMetadataUrl: string;
-
-  /**
    * The email address to use in the from address of REMS sent emails.
    */
   readonly smtpMailFrom: string;

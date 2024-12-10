@@ -24,7 +24,7 @@ keys etc.
 `rems-cmd.sh` works by invoking a lambda which in turn triggers a Fargate Task to spin up
 the desired admin command. _IT MUST BE INVOKED IN THE ACCOUNT OF THE DEPLOYMENT_. That is,
 whereas all other build/deployment is controlled by CDK Pipelines rooted in the Build
-account - the maintenace utility must be run from an AWS environment logged into the deployment
+account - the maintenance utility must be run from an AWS environment logged into the deployment
 account (either Dev or Prod).
 
 As an example here is the process to upgrade REMS.
