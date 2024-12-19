@@ -24,7 +24,11 @@ import {
   DatabaseInstanceEngine,
   PostgresEngineVersion,
 } from "aws-cdk-lib/aws-rds";
-import { DockerImageCode, DockerImageFunction } from "aws-cdk-lib/aws-lambda";
+import {
+  Architecture,
+  DockerImageCode,
+  DockerImageFunction,
+} from "aws-cdk-lib/aws-lambda";
 import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
 import * as path from "path";
 import { DockerServiceWithHttpsLoadBalancerConstruct } from "./lib/docker-service-with-https-load-balancer-construct";
@@ -113,8 +117,14 @@ export class RemsStack extends Stack {
           cpu: props.cpu,
           desiredCount: 1,
           containerName: FIXED_CONTAINER_NAME,
-          healthCheckPath: "/",
+          healthCheck: {
+            path: "/",
+            healthyThresholdCount: 2,
+            interval: Duration.seconds(10),
+          },
           environment: {
+            ECS_CONTAINER_STOP_TIMEOUT: "2",
+            ECS_IMAGE_PULL_BEHAVIOR: "once",
             // rather than embed these in the config.edn that is checked into git -
             // we use the mechanism by which these settings can be made using environment variables
             DATABASE_URL: remsDatabaseUrl,
@@ -290,6 +300,7 @@ export class RemsStack extends Stack {
       vpc: vpc,
       securityGroups: [commandLambdaSecurityGroup],
       timeout: Duration.minutes(14),
+      architecture: Architecture.ARM_64,
       environment: {
         CLUSTER_ARN: cluster.clusterArn,
         CLUSTER_LOG_GROUP_NAME: clusterLogGroup.logGroupName,

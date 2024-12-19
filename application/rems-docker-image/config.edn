@@ -1,4 +1,8 @@
-{:dev false
+{
+ ;; When true, enables development features
+ ;; (should not be turned on in production)
+ :dev false
+
  :port 80
 
  ;; the following settings are going to need to change on every realistic deployment
@@ -22,12 +26,20 @@
  :theme-path "theme.edn"
  :authentication :oidc
  :log-authentication-details true
+ :oidc-use-state :csrf-token
+
+ :oidc-scopes "openid profile email eduperson_orcid schac_home_organization"
+
+
+
  ;; Open ID Connect settings
  ;; some attributes that google oauth returns:
- ;;:oidc-extra-attributes [{:attribute "nickname" :name {:en "Nickname"}}]
+ :oidc-extra-attributes [
+        {:attribute "eduperson_orcid" :name {:en "ORCID"}}
+        {:attribute "schac_home_organization" :name {:en "Organisation"}}
+     ]
 
  :languages [:en]
- :render-css-file? true
 
  :extra-pages [{:id "about"
                 :translations {:en {:title "About"
@@ -42,7 +54,6 @@
 
  :attachment-max-size 10000000 ;; 10MB
  :application-expiration nil
- :enable-pdf-api true
 
 
  :enable-permissions-api true
@@ -57,7 +68,6 @@
 
  :catalogue-is-public true
  :accessibility-report true
- :enable-ega false
  :enable-doi true
- :enable-duo true
+ :enable-duo false
 }

@@ -14,6 +14,7 @@ import {
   OperatingSystemFamily,
 } from "aws-cdk-lib/aws-ecs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
+import { HealthCheck } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 
 type Props = {
   // the VPC to place the cluster in
@@ -37,7 +38,8 @@ type Props = {
   cpu: number;
   containerName: string;
   desiredCount: number;
-  healthCheckPath?: string;
+
+  healthCheck?: HealthCheck;
 };
 
 /**
@@ -114,10 +116,8 @@ export class DockerServiceWithHttpsLoadBalancerConstruct extends Construct {
       taskDefinition: taskDefinition,
     });
 
-    if (props.healthCheckPath) {
-      this.service.targetGroup.configureHealthCheck({
-        path: props.healthCheckPath,
-      });
+    if (props.healthCheck) {
+      this.service.targetGroup.configureHealthCheck(props.healthCheck);
     }
   }
 }

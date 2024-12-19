@@ -1,0 +1,23 @@
+{
+  "name": "dev",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Deploy REMS to dev for temporary experimentation",
+  "scripts": {
+    "dev-deploy": "cdk --app 'npx ts-node rems-dev.ts' deploy RemsLocalDevTestStack",
+    "dev-destroy": "cdk --app 'npx ts-node rems-dev.ts.ts' destroy RemsLocalDevTestStack"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.1",
+    "aws-cdk": "2.171.1",
+    "prettier": "3.4.2",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.2"
+  },
+  "dependencies": {
+    "@tsconfig/node22": "22.0.0",
+    "aws-cdk-lib": "2.171.1",
+    "constructs": "10.4.2",
+    "source-map-support": "0.5.21"
+  }
+}

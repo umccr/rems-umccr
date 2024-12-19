@@ -29,7 +29,7 @@ account (either Dev or Prod).
 
 As an example here is the process to upgrade REMS.
 
-1. Change the `application/rens-docker-image/Dockerfile` to download the new desired version.
+1. Change the `application/rems-docker-image/Dockerfile` to download the new desired version.
 2. Commit the change to github main.
 3. After the codepipeline finishes the dev deployment - using dev credentials - execute
    ```

@@ -1,14 +1,14 @@
 {:t
  {:login
   {:intro      [:div
-                [:h1 "Welcome to REMS for UMCCR/Australian Genomics"]
+                [:h1 "Collaborative Centre for Genomic Cancer Medicine"]
                 [:p
                  "This is a demo environment for testing the REMS software. More information is available on "
                  [:a {:href "/extra-pages/about"} "About"]
                  " page."]]
    :intro2     "A second intro!"
    :login      "Login"
-   :oidc-text  ""
-   :oidc-title ""
+   :oidc-text  "OIDC text"
+   :oidc-title "OIDC title"
    :text       [:p "Please login to make an application in REMS."]
    :title      ""}}}

@@ -1,4 +1,4 @@
-FROM amazoncorretto:18.0.2-al2
+FROM --platform=linux/arm64/v8 amazoncorretto:17.0.13-al2
 
 # our docker entrypoint uses aws and jq to get some JWKs
 RUN yum -y install jq awscli

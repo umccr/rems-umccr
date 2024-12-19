@@ -5,7 +5,7 @@ import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { readFileSync } from "fs";
 import { STACK_DESCRIPTION, TAG_STACK_VALUE } from "./rems-constants";
-import { BuildSpec, LinuxArmBuildImage } from "aws-cdk-lib/aws-codebuild";
+import { LinuxArmBuildImage } from "aws-cdk-lib/aws-codebuild";
 
 /**
  * Stack to hold the self mutating pipeline, and all the relevant settings for deployments
