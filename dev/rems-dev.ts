@@ -32,6 +32,7 @@ new RemsStack(app, "RemsLocalDevTestStack", {
     account: "843407916570",
     region: "ap-southeast-2",
   },
+  isDevelopment: true,
   cloudMapNamespace: cloudMapNamespace,
   cloudMapId: cloudMapId,
   cloudMapServiceName: cloudMapServiceName,

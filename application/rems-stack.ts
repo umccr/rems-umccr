@@ -89,6 +89,7 @@ export class RemsStack extends Stack {
 
     // create the db instance or cluster
     const [db, remsDatabaseUrl] = this.addDatabase(
+      !!props.isDevelopment,
       vpc,
       subnetSelection,
       dbAndClusterSecurityGroup
@@ -205,12 +206,14 @@ export class RemsStack extends Stack {
    * setting). Returns the relevant cluster or instance, as well as a URL suitable for connecting
    * to the instance.
    *
+   * @param isDevelopment if present and true, indicate to use settings suitable for development deploys
    * @param vpc the VPC to put the db in
    * @param subnetSelection the subnet in the VPC to put the db in
    * @param securityGroup the security group to assign to the db
    * @private
    */
   private addDatabase(
+    isDevelopment: boolean,
     vpc: IVpc,
     subnetSelection: SubnetSelection,
     securityGroup: SecurityGroup
@@ -229,7 +232,6 @@ export class RemsStack extends Stack {
     let dbSecret: ISecret;
 
     db = new DatabaseInstance(this, "Database", {
-      removalPolicy: RemovalPolicy.DESTROY,
       engine: DatabaseInstanceEngine.postgres({
         version: PostgresEngineVersion.VER_17,
       }),
@@ -242,6 +244,11 @@ export class RemsStack extends Stack {
       vpc: vpc,
       vpcSubnets: subnetSelection,
       securityGroups: [securityGroup],
+      // whether we should silently delete - in prod we should not!
+      removalPolicy: isDevelopment
+        ? RemovalPolicy.DESTROY
+        : RemovalPolicy.SNAPSHOT,
+      deletionProtection: !isDevelopment,
     });
     dbSocketAddress = (db as DatabaseInstance).instanceEndpoint.socketAddress;
     dbSecret = (db as DatabaseInstance).secret!;
