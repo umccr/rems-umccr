@@ -1,5 +1,11 @@
 export interface RemsSettings {
   /**
+   * If present and true, indicates to resources that they should use values suitable for a development
+   * deployment (i.e. no deletion protection, short time frames for expiry etc)
+   */
+  readonly isDevelopment?: boolean;
+
+  /**
    * The namespace we will register services in - for location by our rems-cmd tool
    */
   readonly cloudMapNamespace: string;
