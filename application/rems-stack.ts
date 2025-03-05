@@ -308,7 +308,9 @@ export class RemsStack extends Stack {
     // tasks are a bit slow
     const f = new DockerImageFunction(this, "CommandLambda", {
       memorySize: 128,
-      code: DockerImageCode.fromImageAsset(dockerImageFolder),
+      code: DockerImageCode.fromImageAsset(dockerImageFolder, {
+        platform: Platform.LINUX_ARM64,
+      }),
       vpcSubnets: subnetSelection,
       vpc: vpc,
       securityGroups: [commandLambdaSecurityGroup],

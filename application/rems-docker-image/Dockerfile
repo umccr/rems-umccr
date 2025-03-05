@@ -1,4 +1,4 @@
-FROM --platform=linux/arm64/v8 amazoncorretto:17.0.13-al2
+FROM amazoncorretto:17.0.14-al2
 
 # our docker entrypoint uses aws and jq to get some JWKs
 RUN yum -y install jq awscli
@@ -8,7 +8,7 @@ RUN mkdir /rems
 WORKDIR /rems
 
 # For documentation see docs/installing-upgrading.md
-ADD https://github.com/CSCfi/rems/releases/download/v2.38/rems.jar /rems/rems.jar
+ADD https://github.com/CSCfi/rems/releases/download/v2.38.1/rems.jar /rems/rems.jar
 
 # if adding dev rems builds, copy the rems jar direct into this folder for deployment
 # ADD rems.jar /rems/rems.jar
