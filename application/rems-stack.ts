@@ -35,7 +35,7 @@ import { DockerServiceWithHttpsLoadBalancerConstruct } from "./lib/docker-servic
 import { HttpNamespace, Service } from "aws-cdk-lib/aws-servicediscovery";
 import { Cluster, TaskDefinition } from "aws-cdk-lib/aws-ecs";
 import { Policy, PolicyStatement } from "aws-cdk-lib/aws-iam";
-import { LogGroup } from "aws-cdk-lib/aws-logs";
+import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { ISecret } from "aws-cdk-lib/aws-secretsmanager";
 import { RemsSettings } from "./rems-settings";
 import { STACK_DESCRIPTION } from "../rems-constants";
@@ -236,6 +236,12 @@ export class RemsStack extends Stack {
         version: PostgresEngineVersion.VER_17,
       }),
       credentials: dbCreds,
+      // as required by security hub RDS.9
+      cloudwatchLogsExports: ["postgresql", "upgrade"],
+      // for dev no point in keeping the logs around excessively though
+      cloudwatchLogsRetention: isDevelopment
+        ? RetentionDays.ONE_WEEK
+        : RetentionDays.INFINITE,
       databaseName: FIXED_DATABASE_NAME,
       instanceType: InstanceType.of(
         InstanceClass.BURSTABLE4_GRAVITON,
@@ -302,7 +308,9 @@ export class RemsStack extends Stack {
     // tasks are a bit slow
     const f = new DockerImageFunction(this, "CommandLambda", {
       memorySize: 128,
-      code: DockerImageCode.fromImageAsset(dockerImageFolder),
+      code: DockerImageCode.fromImageAsset(dockerImageFolder, {
+        platform: Platform.LINUX_ARM64,
+      }),
       vpcSubnets: subnetSelection,
       vpc: vpc,
       securityGroups: [commandLambdaSecurityGroup],
