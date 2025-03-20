@@ -243,10 +243,13 @@ export class RemsStack extends Stack {
         ? RetentionDays.ONE_WEEK
         : RetentionDays.INFINITE,
       databaseName: FIXED_DATABASE_NAME,
+      // this is recommended to be on even if we don't currently set up roles to connect this way RDS.10
+      iamAuthentication: true,
       instanceType: InstanceType.of(
         InstanceClass.BURSTABLE4_GRAVITON,
         InstanceSize.SMALL
       ),
+      // security controls recommend always encrypting RDS.4
       storageEncrypted: true,
       vpc: vpc,
       vpcSubnets: subnetSelection,
