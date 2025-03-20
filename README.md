@@ -7,10 +7,7 @@ datasets.
 
 ## Deployment
 
-For this UMCCR pipeline, REMS is deployed to
-
-- [Dev](https://rems.dev.umccr.org)
-- [Prod](https://rems.umccr.org) (eventually)
+For this UMCCR pipeline, REMS is deployed to the data control account/
 
 New deployments are triggered on commits to Github main. Promotion to production needs to
 be approved manually in the builds account.

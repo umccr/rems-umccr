@@ -247,6 +247,7 @@ export class RemsStack extends Stack {
         InstanceClass.BURSTABLE4_GRAVITON,
         InstanceSize.SMALL
       ),
+      storageEncrypted: true,
       vpc: vpc,
       vpcSubnets: subnetSelection,
       securityGroups: [securityGroup],
